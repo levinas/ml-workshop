@@ -140,7 +140,7 @@ def main():
     classifiers = [
                     ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
                     ('LogRegL1', LogisticRegression(penalty='l1')),
-                    ('XGBoost', XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)),
+                    ('XGBoost', XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.05)),
                     ('SVM', SVC()),
                     # ('Ada', AdaBoostClassifier(n_estimators=100)),
                     # ('KNN', KNeighborsClassifier()),
