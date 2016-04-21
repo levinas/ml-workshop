@@ -47,7 +47,7 @@ def read_dataset(fname, delimiter='', skipcols=2, thresh=None):
     return X, y, X_label
 
 def test():
-    X, y, labels = read_dataset('toy.csv')
+    X, y, labels = read_dataset('toy_training.csv')
     print X
     print y
     print labels
@@ -142,7 +142,7 @@ def main():
     parser.add_argument('-p', '--prefix', action='store', help='output prefix')
     parser.add_argument('-s', '--skipcols', default=2, action='store', help='skip columns')
     parser.add_argument('-t', '--threshold', default=None, action='store', help='convert y into a binary vector (default: median)')
-    parser.add_argument('train', default='s1.toy', help='training drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
+    parser.add_argument('train', default='toy_training.csv', help='training drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     parser.add_argument('test', default='', nargs='?', help='testing drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     args = parser.parse_args()
 
