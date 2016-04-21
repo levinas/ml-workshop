@@ -17,6 +17,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.cross_validation import StratifiedKFold, StratifiedShuffleSplit
 from sklearn.metrics import accuracy_score, auc, f1_score, precision_score, recall_score, roc_curve
 
+from xgboost import XGBClassifier
 
 numpy.set_printoptions(threshold=numpy.nan)
 
@@ -139,6 +140,7 @@ def main():
     classifiers = [
                     ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
                     ('LogRegL1', LogisticRegression(penalty='l1')),
+                    ('XGBoost', XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)),
                     ('SVM', SVC()),
                     # ('Ada', AdaBoostClassifier(n_estimators=100)),
                     # ('KNN', KNeighborsClassifier()),
