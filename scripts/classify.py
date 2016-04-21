@@ -59,6 +59,7 @@ def score_format(metric, score, eol='\n'):
     return '{:<15} = {:.5f}'.format(metric, score) + eol
 
 def top_important_features(clf, feature_names, num_features=20):
+    print clf.get_fscore()
     if not hasattr(clf, "feature_importances_"):
         return
     fi = clf.feature_importances_
@@ -138,9 +139,9 @@ def main():
         make_caffe_files(prefix+'.caffe', X, y, X2, y2)
 
     classifiers = [
+                    ('XGBoost', XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)),
                     ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
                     ('LogRegL1', LogisticRegression(penalty='l1')),
-                    ('XGBoost', XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.05)),
                     ('SVM', SVC()),
                     # ('Ada', AdaBoostClassifier(n_estimators=100)),
                     # ('KNN', KNeighborsClassifier()),
