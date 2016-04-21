@@ -20,16 +20,30 @@ from sklearn.metrics import accuracy_score, auc, f1_score, precision_score, reca
 
 numpy.set_printoptions(threshold=numpy.nan)
 
-def read_dataset(fname):
+def guess_delimiter(text):
+    delims = (',', '\t', ' ')
+    n_max = 0
+    delim = ','
+    for d in delims:
+        n = text.count(d)
+        if n > n_max:
+            n_max = n
+            delim = d
+    return delim
+
+def read_dataset(fname, delimiter='', skipcols=2, thresh=None):
     f = open(fname)
-    cols = f.readline().split(",")
-    skipcols = 2  # first 3 columns (CellLine PubChemID ZScore) followed by features
+    line = f.readline().rstrip()
+    delim = delimiter if len(delimiter) > 0 else guess_delimiter(line)
+    cols = line.split(delim)
+    # default skipcols = 2: first 3 columns (CellLine PubChemID ZScore) followed by features
+    skipcols = int(skipcols)
     X_label = cols[skipcols:]
-    X = np.loadtxt(f, delimiter=",", unpack=True, usecols=range(skipcols, len(cols)))
+    X = np.loadtxt(f, delimiter=delim, unpack=True, usecols=range(skipcols, len(cols)))
     X = np.transpose(X)
-    y = np.genfromtxt(fname, skip_header=1, delimiter=",", usecols=[skipcols-1])
-    median = np.median(y)
-    y = np.transpose(map(lambda x: 1 if x > median else 0, y))
+    y = np.genfromtxt(fname, skip_header=1, delimiter=delim, usecols=[skipcols-1])
+    thresh = float(thresh) if thresh else np.median(y)
+    y = np.transpose(map(lambda x: 1 if x > thresh else 0, y))
     return X, y, X_label
 
 def test():
@@ -57,7 +71,7 @@ def sprint_features(top_features, num_features=20):
         str += '{}\t{:.5f}\n'.format(feature[1], feature[0])
     return str
 
-def make_caffe_files(X, y, path):
+def make_caffe_files(path, X, y, X2=None, y2=None):
 
     try:
         os.makedirs(path)
@@ -65,47 +79,78 @@ def make_caffe_files(X, y, path):
         if exc.errno == errno.EEXIST and os.path.isdir(path): pass
         else: raise
 
-    sss = StratifiedShuffleSplit(y, 1, test_size=0.1)
-    for train_index, test_index in sss:
+    if X2 and y2:
+        X_train, X_test = X, X2
+        y_train, y_test = y, y2
+    else:
+        sss = StratifiedShuffleSplit(y, 1, test_size=0.3)
+        train_index, test_index = list(sss)[0]
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
 
-        train_h5 = os.path.join(path, 'train.h5')
-        test_h5 = os.path.join(path, 'test.h5')
+    train_h5 = os.path.join(path, 'train.h5')
+    test_h5 = os.path.join(path, 'test.h5')
 
-        train_filename = os.path.join(path, 'train.txt')
-        test_filename = os.path.join(path, 'test.txt')
+    train_filename = os.path.join(path, 'train.txt')
+    test_filename = os.path.join(path, 'test.txt')
 
-        with h5py.File(train_h5, 'w') as f:
-            f['data'] = X_train
-            f['label'] = y_train.astype(np.float32)
+    with h5py.File(train_h5, 'w') as f:
+        f['data'] = X_train
+        f['label'] = y_train.astype(np.float32)
 
-        with h5py.File(test_h5, 'w') as f:
-            f['data'] = X_test
-            f['label'] = y_test.astype(np.float32)
+    with h5py.File(test_h5, 'w') as f:
+        f['data'] = X_test
+        f['label'] = y_test.astype(np.float32)
 
-        with open(train_filename, 'w') as f:
-            f.write('train.h5\n')
+    with open(train_filename, 'w') as f:
+        f.write('train.h5\n')
 
-        with open(test_filename, 'w') as f:
-            f.write('test.h5\n')
+    with open(test_filename, 'w') as f:
+        f.write('test.h5\n')
 
-        return
+    # for train_index, test_index in sss:
+    #     X_train, X_test = X[train_index], X[test_index]
+    #     y_train, y_test = y[train_index], y[test_index]
+
+    #     train_h5 = os.path.join(path, 'train.h5')
+    #     test_h5 = os.path.join(path, 'test.h5')
+
+    #     train_filename = os.path.join(path, 'train.txt')
+    #     test_filename = os.path.join(path, 'test.txt')
+
+    #     with h5py.File(train_h5, 'w') as f:
+    #         f['data'] = X_train
+    #         f['label'] = y_train.astype(np.float32)
+
+    #     with h5py.File(test_h5, 'w') as f:
+    #         f['data'] = X_test
+    #         f['label'] = y_test.astype(np.float32)
+
+    #     with open(train_filename, 'w') as f:
+    #         f.write('train.h5\n')
+
+    #     with open(test_filename, 'w') as f:
+    #         f.write('test.h5\n')
+
+    #     return
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--caffe', action='store_true', help='save train and test files in HDF5 for Caffe')
+    parser.add_argument('-d', '--delimiter', default='',action='store', help='save train and test files in HDF5 for Caffe')
     parser.add_argument('-f', '--folds', default=3, action='store', help='number of folds for cross validation if test data is not provided')
     parser.add_argument('-o', '--outdir', action='store', help='store results files to a specified directory')
     parser.add_argument('-p', '--prefix', action='store', help='output prefix')
+    parser.add_argument('-s', '--skipcols', default=2, action='store', help='skip columns')
+    parser.add_argument('-t', '--threshold', default=None, action='store', help='convert y into a binary vector (default: median)')
     parser.add_argument('train', default='s1.toy', help='training drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     parser.add_argument('test', default='', nargs='?', help='testing drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     args = parser.parse_args()
 
-    X, y, labels = read_dataset(args.train)
+    X, y, labels = read_dataset(args.train, args.delimiter, args.skipcols, args.threshold)
     X2, y2, labels2 = None, None, None
     if args.test:
-        X2, y2, labels2 = read_dataset(args.test)
+        X2, y2, labels2 = read_dataset(args.test, args.delimiter, args.skipcols, args.threshold)
 
     # sys.exit(0)
 
@@ -114,7 +159,7 @@ def main():
         prefix = os.path.join(args.outdir, prefix)
 
     if args.caffe:
-        make_caffe_files(X, y, prefix+'.caffe')
+        make_caffe_files(prefix+'.caffe', X, y, X2, y2)
 
     classifiers = [
                     ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
