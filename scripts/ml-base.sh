@@ -6,9 +6,11 @@ apt-get install -y --no-install-recommends libboost-all-dev
 apt-get install -y libgflags-dev libgoogle-glog-dev liblmdb-dev
 apt-get install -y libatlas-base-dev
 
+apt-get install -y libffi-dev libssl-dev
 apt-get install -y python-numpy python-scipy python-dev python-pip python-nose g++ libopenblas-dev git libsnappy1 python-sklearn hdf5-tools libhdf5-openmpi-7 libopencv-ml2.4 python-opencv python-h5py
 
 pip install --upgrade pip
+pip install --upgrade requests[security]
 pip install -U scikit-learn
 pip install -U Theano
 

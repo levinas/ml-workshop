@@ -95,12 +95,21 @@ def make_caffe_files(X, y, path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--caffe', action='store_true', help='save train and test files in HDF5 for Caffe')
+    parser.add_argument('-f', '--folds', default=3, action='store', help='number of folds for cross validation if test data is not provided')
     parser.add_argument('-o', '--outdir', action='store', help='store results files to a specified directory')
-    parser.add_argument('fname', default='s1.toy', help='drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
+    parser.add_argument('-p', '--prefix', action='store', help='output prefix')
+    parser.add_argument('train', default='s1.toy', help='training drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
+    parser.add_argument('test', default='', nargs='?', help='testing drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     args = parser.parse_args()
 
-    X, y, labels = read_dataset(args.fname)
-    prefix = os.path.basename(args.fname)
+    X, y, labels = read_dataset(args.train)
+    X2, y2, labels2 = None, None, None
+    if args.test:
+        X2, y2, labels2 = read_dataset(args.test)
+
+    # sys.exit(0)
+
+    prefix = args.prefix if args.prefix else os.path.basename(args.train)
     if args.outdir:
         prefix = os.path.join(args.outdir, prefix)
 
@@ -122,23 +131,32 @@ def main():
         tests = None
         preds = None
 
-        skf = StratifiedKFold(y, n_folds=10, shuffle=True)
-        for i, (train_index, test_index) in enumerate(skf):
-            # print("  > TRAIN:", train_index, "TEST:", test_index)
-            X_train, X_test = X[train_index], X[test_index]
-            y_train, y_test = y[train_index], y[test_index]
+        if args.test:
+            X_train, X_test = X, X2
+            y_train, y_test = y, y2
             clf.fit(X_train, y_train)
             train_scores.append(clf.score(X_train, y_train))
             test_scores.append(clf.score(X_test, y_test))
-            sys.stderr.write("  fold #{}: score={:.3f}\n".format(i, clf.score(X_test, y_test)))
-
             y_pred = clf.predict(X_test)
-            preds = np.concatenate((preds, y_pred)) if preds is not None else y_pred
-            tests = np.concatenate((tests, y_test)) if tests is not None else y_test
-
+            preds = y_pred
+            tests = y_test
             if hasattr(clf, "predict_proba"):
-                probas_ = clf.fit(X_train, y_train).predict_proba(X_test)
-                probas = np.concatenate((probas, probas_)) if probas is not None else probas_
+                probas = clf.fit(X_train, y_train).predict_proba(X_test)
+        else:
+            skf = StratifiedKFold(y, n_folds=args.folds, shuffle=True)
+            for i, (train_index, test_index) in enumerate(skf):
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
+                clf.fit(X_train, y_train)
+                train_scores.append(clf.score(X_train, y_train))
+                test_scores.append(clf.score(X_test, y_test))
+                sys.stderr.write("  fold #{}: score={:.3f}\n".format(i, clf.score(X_test, y_test)))
+                y_pred = clf.predict(X_test)
+                preds = np.concatenate((preds, y_pred)) if preds is not None else y_pred
+                tests = np.concatenate((tests, y_test)) if tests is not None else y_test
+                if hasattr(clf, "predict_proba"):
+                    probas_ = clf.fit(X_train, y_train).predict_proba(X_test)
+                    probas = np.concatenate((probas, probas_)) if probas is not None else probas_
 
         roc_auc_core = None
         if probas is not None:
