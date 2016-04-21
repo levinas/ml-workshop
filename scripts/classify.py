@@ -31,18 +31,19 @@ def guess_delimiter(text):
             delim = d
     return delim
 
-def read_dataset(fname, delimiter='', skipcols=2, thresh=None):
+def read_dataset(fname, delimiter='', skipcols=1, thresh=None):
     f = open(fname)
     line = f.readline().rstrip()
     delim = delimiter if len(delimiter) > 0 else guess_delimiter(line)
     cols = line.split(delim)
-    # default skipcols = 2: first 3 columns (CellLine PubChemID ZScore) followed by features
+    # default skipcols = 1: first 2 columns (CellLine PubChemID) followed by ZScores and features
     skipcols = int(skipcols)
-    X_label = cols[skipcols:]
-    X = np.loadtxt(f, delimiter=delim, unpack=True, usecols=range(skipcols, len(cols)))
+    X_label = cols[skipcols+1:]
+    X = np.loadtxt(f, delimiter=delim, unpack=True, usecols=range(skipcols+1, len(cols)))
     X = np.transpose(X)
-    y = np.genfromtxt(fname, skip_header=1, delimiter=delim, usecols=[skipcols-1])
+    y = np.genfromtxt(fname, skip_header=1, delimiter=delim, usecols=[skipcols])
     thresh = float(thresh) if thresh else np.median(y)
+    print thresh
     y = np.transpose(map(lambda x: 1 if x > thresh else 0, y))
     return X, y, X_label
 
@@ -140,7 +141,7 @@ def main():
     parser.add_argument('-f', '--folds', default=3, action='store', help='number of folds for cross validation if test data is not provided')
     parser.add_argument('-o', '--outdir', action='store', help='store results files to a specified directory')
     parser.add_argument('-p', '--prefix', action='store', help='output prefix')
-    parser.add_argument('-s', '--skipcols', default=2, action='store', help='skip columns')
+    parser.add_argument('-s', '--skipcols', default=1, action='store', help='number of columns before the y column')
     parser.add_argument('-t', '--threshold', default=None, action='store', help='convert y into a binary vector (default: median)')
     parser.add_argument('train', default='toy_training.csv', help='training drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     parser.add_argument('test', default='', nargs='?', help='testing drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
