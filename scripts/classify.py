@@ -32,6 +32,7 @@ def guess_delimiter(text):
     return delim
 
 def read_dataset(fname, delimiter='', skipcols=1, thresh=None):
+    sys.stderr.write("Reading data from {}\n".format(fname))
     f = open(fname)
     line = f.readline().rstrip()
     delim = delimiter if len(delimiter) > 0 else guess_delimiter(line)
@@ -43,7 +44,7 @@ def read_dataset(fname, delimiter='', skipcols=1, thresh=None):
     X = np.transpose(X)
     y = np.genfromtxt(fname, skip_header=1, delimiter=delim, usecols=[skipcols])
     thresh = float(thresh) if thresh else np.median(y)
-    print thresh
+    sys.stderr.write("Descritizing with threshold {}\n".format(thresh))
     y = np.transpose(map(lambda x: 1 if x > thresh else 0, y))
     return X, y, X_label
 
@@ -164,13 +165,13 @@ def main():
     classifiers = [
                     ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
                     ('LogRegL1', LogisticRegression(penalty='l1')),
-                    # ('SVM', SVC()),
+                    ('SVM', SVC()),
                     # ('Ada', AdaBoostClassifier(n_estimators=100)),
                     # ('KNN', KNeighborsClassifier()),
                   ]
 
     for name, clf in classifiers:
-        sys.stderr.write("> {}\n".format(name))
+        sys.stderr.write("\n> {}\n".format(name))
         train_scores, test_scores = [], []
         probas = None
         tests = None
@@ -188,7 +189,7 @@ def main():
             if hasattr(clf, "predict_proba"):
                 probas = clf.fit(X_train, y_train).predict_proba(X_test)
         else:
-            skf = StratifiedKFold(y, n_folds=args.folds, shuffle=True)
+            skf = StratifiedKFold(y, n_folds=int(args.folds), shuffle=True)
             for i, (train_index, test_index) in enumerate(skf):
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
@@ -233,8 +234,9 @@ def main():
             with open(fea_fname, "w") as fea_file:
                 fea_file.write(sprint_features(top_features))
 
-        sys.stderr.write('  test={:.5f} train={:.5f}\n\n'.format(avg_test_score, avg_train_score))
+        sys.stderr.write('  test={:.5f} train={:.5f}\n'.format(avg_test_score, avg_train_score))
 
+    sys.stderr.write("\n")
 
 if __name__ == '__main__':
     # test()
