@@ -47,8 +47,7 @@ def read_dataset(fname, delimiter='', skipcols=2, thresh=None):
     return X, y, X_label
 
 def test():
-    # X, y, labels = read_dataset('sample1/s1.d200.z1')
-    X, y, labels = read_dataset('s1.toy')
+    X, y, labels = read_dataset('toy.csv')
     print X
     print y
     print labels
@@ -79,7 +78,7 @@ def make_caffe_files(path, X, y, X2=None, y2=None):
         if exc.errno == errno.EEXIST and os.path.isdir(path): pass
         else: raise
 
-    if X2 and y2:
+    if X2 is not None and y2 is not None:
         X_train, X_test = X, X2
         y_train, y_test = y, y2
     else:
