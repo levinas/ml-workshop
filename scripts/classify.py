@@ -59,12 +59,16 @@ def score_format(metric, score, eol='\n'):
     return '{:<15} = {:.5f}'.format(metric, score) + eol
 
 def top_important_features(clf, feature_names, num_features=20):
-    print clf.get_fscore()
-    if not hasattr(clf, "feature_importances_"):
+    if hasattr(clf, "booster"):
+        fi = clf.booster().get_fscore()
+        return None
+    elif not hasattr(clf, "feature_importances_"):
         return
-    fi = clf.feature_importances_
-    features = [ (f, n) for f, n in zip(fi, feature_names)]
-    top = sorted(features, key=lambda f:f[0], reverse=True)[:num_features]
+    else:
+        fi = clf.feature_importances_
+        features = [ (f, n) for f, n in zip(fi, feature_names)]
+        top = sorted(features, key=lambda f:f[0], reverse=True)[:num_features]
+
     return top
 
 def sprint_features(top_features, num_features=20):
