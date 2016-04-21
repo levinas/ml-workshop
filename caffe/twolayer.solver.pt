@@ -1,0 +1,16 @@
+net: "twolayer.net.pt"
+test_iter: 1000
+test_interval: 10000
+base_lr: 0.01
+lr_policy: "step"
+# gamma: 0.1
+gamma: 0.9
+stepsize: 500
+display: 5000
+max_iter: 20000
+momentum: 0.9
+weight_decay: 0.0005
+snapshot_after_train: false
+snapshot: 100000
+snapshot_prefix: "snapshot"
+solver_mode: CPU
