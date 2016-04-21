@@ -109,32 +109,6 @@ def make_caffe_files(path, X, y, X2=None, y2=None):
     with open(test_filename, 'w') as f:
         f.write('test.h5\n')
 
-    # for train_index, test_index in sss:
-    #     X_train, X_test = X[train_index], X[test_index]
-    #     y_train, y_test = y[train_index], y[test_index]
-
-    #     train_h5 = os.path.join(path, 'train.h5')
-    #     test_h5 = os.path.join(path, 'test.h5')
-
-    #     train_filename = os.path.join(path, 'train.txt')
-    #     test_filename = os.path.join(path, 'test.txt')
-
-    #     with h5py.File(train_h5, 'w') as f:
-    #         f['data'] = X_train
-    #         f['label'] = y_train.astype(np.float32)
-
-    #     with h5py.File(test_h5, 'w') as f:
-    #         f['data'] = X_test
-    #         f['label'] = y_test.astype(np.float32)
-
-    #     with open(train_filename, 'w') as f:
-    #         f.write('train.h5\n')
-
-    #     with open(test_filename, 'w') as f:
-    #         f.write('test.h5\n')
-
-    #     return
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--caffe', action='store_true', help='save train and test files in HDF5 for Caffe')
