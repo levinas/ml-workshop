@@ -11,7 +11,7 @@
 | ResNet-152     | 2015 |   152 | ~24 M              | ILSVRC-2012 | 11 G  | 722 GB         |                  3760 |
 | ResNet-1202    | 2015 |  1202 | 19 M               | CIFAR-10    |       | 614 MB         |      4 <sup>(1)</sup> |
 | VGG-16 Pruned  | 2015 |    16 | 10 M               | ILSVRC-2012 |       | 722 GB         | 19,240 <sup>(2)</sup> |
-| XNOR-Net(Alex) | 2016 |     8 | (binary) 61 M      | ILSVRC-2012 |       | 722 GB         | 95,720 <sup>(3)</sup> |
+| XNOR-Net(Alex) | 2016 |     8 | binary 61 M      | ILSVRC-2012 |       | 722 GB         | 95,720 <sup>(3)</sup> |
 | COTS           | 2013 |     3 | 11 B               | 10M-Youtube |       | 4.8 TB         |                    55 |
 | LBANN-400K     | 2016 |     3 | 79 B               | ILSVRC-2012 |       | 722 GB         |                  1.15 |
 | LBANN-100K     | 2016 |     3 | ~20 B              | YFCC100M    |       | ~50 TB         |                  ~300 |
