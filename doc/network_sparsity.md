@@ -19,6 +19,6 @@
 
 
 Notes:
-(1) Accuracy of the 1202-layer ResNet is not as good as a 110-layer version, possibly due to overfitting.
-(2) A three-step pruning method reduces AlexNet's connections by 13X with no loss of accuracy.
-(3) This binary version of the AlexNet saves memory by 64X, causing 3% accuracy loss (Top-5: 80%->77%).
+(1) Accuracy of the 1202-layer ResNet is not as good as a 110-layer version, possibly due to overfitting.  
+(2) A three-step pruning method reduces AlexNet's connections by 13X with no loss of accuracy.  
+(3) This binary version of the AlexNet saves memory by 64X, causing 3% accuracy loss (Top-5: 80%->77%).  
