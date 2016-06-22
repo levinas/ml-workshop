@@ -2,7 +2,7 @@
 
 import argparse
 import errno
-# import h5py
+import h5py
 import os
 import sys
 
