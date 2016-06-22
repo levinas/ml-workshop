@@ -2,7 +2,7 @@
 
 import argparse
 import errno
-import h5py
+# import h5py
 import os
 import sys
 
@@ -63,6 +63,11 @@ def top_important_features(clf, feature_names, num_features=20):
         fi = clf.booster().get_fscore()
         return None
     elif not hasattr(clf, "feature_importances_"):
+        if hasattr(clf, "coef_"):
+            fi = clf.coef_[0]
+            features = [ (f, n) for f, n in zip(fi, feature_names)]
+            top = sorted(features, key=lambda f:abs(f[0]), reverse=True)[:num_features]
+            return top
         return
     else:
         fi = clf.feature_importances_
@@ -146,7 +151,7 @@ def main():
                     ('XGBoost', XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)),
                     ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
                     ('LogRegL1', LogisticRegression(penalty='l1')),
-                    ('SVM', SVC()),
+                    # ('SVM', SVC()),
                     # ('Ada', AdaBoostClassifier(n_estimators=100)),
                     # ('KNN', KNeighborsClassifier()),
                   ]
