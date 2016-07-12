@@ -13,6 +13,7 @@ from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
+from sklearn.preprocessing import Imputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.cross_validation import StratifiedKFold, StratifiedShuffleSplit
 from sklearn.metrics import accuracy_score, auc, f1_score, precision_score, recall_score, roc_curve
@@ -32,7 +33,7 @@ def guess_delimiter(text):
             delim = d
     return delim
 
-def read_dataset(fname, delimiter='', skipcols=1, thresh=None):
+def read_dataset(fname, delimiter='', skipcols=1, thresh=None, imputer=None):
     sys.stderr.write("Reading data from {}\n".format(fname))
     f = open(fname)
     line = f.readline().rstrip()
@@ -41,8 +42,12 @@ def read_dataset(fname, delimiter='', skipcols=1, thresh=None):
     # default skipcols = 1: first 2 columns (CellLine PubChemID) followed by ZScores and features
     skipcols = int(skipcols)
     X_label = cols[skipcols+1:]
-    X = np.loadtxt(f, delimiter=delim, unpack=True, usecols=range(skipcols+1, len(cols)))
+    # X = np.loadtxt(f, delimiter=delim, unpack=True, usecols=range(skipcols+1, len(cols)))
+    X = np.genfromtxt(fname, delimiter=delim, usecols=range(skipcols+1, len(cols)))
     X = np.transpose(X)
+    if imputer:
+        imp = Imputer(missing_values='NaN', strategy=imputer, axis=0)
+        X = imp.fit_transform(X)
     y = np.genfromtxt(fname, skip_header=1, delimiter=delim, usecols=[skipcols])
     thresh = float(thresh) if thresh else np.median(y)
     sys.stderr.write("Descritizing with threshold {}\n".format(thresh))
@@ -58,7 +63,7 @@ def test():
 def score_format(metric, score, eol='\n'):
     return '{:<15} = {:.5f}'.format(metric, score) + eol
 
-def top_important_features(clf, feature_names, num_features=20):
+def top_important_features(clf, feature_names, num_features=100):
     if hasattr(clf, "booster"):
         fi = clf.booster().get_fscore()
         return None
@@ -76,10 +81,11 @@ def top_important_features(clf, feature_names, num_features=20):
 
     return top
 
-def sprint_features(top_features, num_features=20):
+def sprint_features(top_features, num_features=100):
     str = ''
     for i, feature in enumerate(top_features):
-        if i >= num_features: return
+        if i >= num_features:
+            break
         str += '{}\t{:.5f}\n'.format(feature[1], feature[0])
     return str
 
@@ -123,8 +129,9 @@ def make_caffe_files(path, X, y, X2=None, y2=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--caffe', action='store_true', help='save train and test files in HDF5 for Caffe')
-    parser.add_argument('-d', '--delimiter', default='',action='store', help='save train and test files in HDF5 for Caffe')
+    parser.add_argument('-d', '--delimiter', default='', action='store', help='save train and test files in HDF5 for Caffe')
     parser.add_argument('-f', '--folds', default=3, action='store', help='number of folds for cross validation if test data is not provided')
+    parser.add_argument('-m', '--imputer', default=None, action='store', help='imputer to use for filling in missing values: mean, median, most_frequent')
     parser.add_argument('-o', '--outdir', action='store', help='store results files to a specified directory')
     parser.add_argument('-p', '--prefix', action='store', help='output prefix')
     parser.add_argument('-s', '--skipcols', default=1, action='store', help='number of columns before the y column')
@@ -133,10 +140,10 @@ def main():
     parser.add_argument('test', default='', nargs='?', help='testing drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     args = parser.parse_args()
 
-    X, y, labels = read_dataset(args.train, args.delimiter, args.skipcols, args.threshold)
+    X, y, labels = read_dataset(args.train, args.delimiter, args.skipcols, args.threshold, args.imputer)
     X2, y2, labels2 = None, None, None
     if args.test:
-        X2, y2, labels2 = read_dataset(args.test, args.delimiter, args.skipcols, args.threshold)
+        X2, y2, labels2 = read_dataset(args.test, args.delimiter, args.skipcols, args.threshold, args.imputer)
 
     # sys.exit(0)
 
