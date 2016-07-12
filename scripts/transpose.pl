@@ -32,6 +32,7 @@ while (<F>) {
     chomp;
     s/\s+$//;
     my @cols = split/\t/;
+    last unless @cols;
     if ($ln == $sr+1) {
         @cell_lines = @cols[$sc..$#cols];
     } else {
