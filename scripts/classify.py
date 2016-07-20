@@ -44,29 +44,29 @@ def guess_delimiter(text):
     return delim
 
 def read_dataset(fname, delimiter='infer', skipcols=1, thresholds=None, imputer=None):
-    sys.stderr.write("Reading data from {} ... ".format(fname))
+    print("Reading data from {} ... ".format(fname), end="", file=sys.stderr)
     time1 = time.time()
     delim = delimiter if delimiter != 'infer' else guess_delimiter(open(fname).readline().rstrip())
     df = pd.read_csv(fname, sep=delim, na_values=['-', 'na'], engine='c')
     X = np.array(df.iloc[:, skipcols+1:])
     y = np.array(df.iloc[:, skipcols:skipcols+1]).ravel()
     X_label = list(df.columns.values)[skipcols+1:]
-    sys.stderr.write("{:.2f} seconds\n".format(time.time() - time1))
-    print("X.shape:", X.shape)
+    print("{:.2f} seconds".format(time.time() - time1), file=sys.stderr)
+    print("X.shape:", X.shape, file=sys.stderr)
     if imputer:
         imp = Imputer(missing_values='NaN', strategy=imputer, axis=0)
         X = imp.fit_transform(X)
     if not thresholds:
         thresholds = np.array([np.median(y)])
-    sys.stderr.write("Descritizing with thresholds: {}\n".format(thresholds))
+    print("Descritizing with thresholds: {}".format(thresholds), file=sys.stderr)
     y = np.digitize(y, thresholds)    #
     hist, _ = np.histogram(y, range(len(thresholds)+2))
-    print('Y classes:', hist, '('+str(hist/len(y))+')')
+    print('Y classes:', hist, '('+str(hist/len(y))+')', file=sys.stderr)
     return X, y, X_label
 
 
 def read_dataset_old(fname, delimiter='infer', skipcols=1, thresh=None, imputer=None):
-    sys.stderr.write("Reading data from {} ... ".format(fname))
+    print("Reading data from {} ... ".format(fname), end="", file=sys.stderr)
     time1 = time.time()
     line = open(fname).readline()
     delim = delimiter if delimiter != 'infer' else guess_delimiter(line.rstrip())
@@ -81,9 +81,9 @@ def read_dataset_old(fname, delimiter='infer', skipcols=1, thresh=None, imputer=
         imp = Imputer(missing_values='NaN', strategy=imputer, axis=0)
         X = imp.fit_transform(X)
     y = np.genfromtxt(fname, skip_header=1, delimiter=delim, usecols=[skipcols])
-    sys.stderr.write("{:.2f} seconds\n".format(time.time() - time1))
+    print("{:.2f} seconds\n".format(time.time() - time1), file=sys.stderr)
     thresh = float(thresh) if thresh else np.median(y)
-    sys.stderr.write("Descritizing with threshold {}\n".format(thresh))
+    print("Descritizing with threshold {}\n".format(thresh), file=sys.stderr)
     y = np.transpose(map(lambda x: 1 if x > thresh else 0, y))
     return X, y, X_label
 
@@ -210,7 +210,7 @@ def main():
     best_accuracy = -np.Inf
 
     for name, clf in classifiers:
-        sys.stderr.write("\n> {}\n".format(name))
+        print("\n> {}".format(name), file=sys.stderr)
         train_scores, test_scores = [], []
         probas = None
         tests = None
@@ -235,7 +235,7 @@ def main():
                 clf.fit(X_train, y_train)
                 train_scores.append(clf.score(X_train, y_train))
                 test_scores.append(clf.score(X_test, y_test))
-                sys.stderr.write("  fold #{}: score={:.3f}\n".format(i, clf.score(X_test, y_test)))
+                print("  fold #{}: score={:.3f}".format(i, clf.score(X_test, y_test)), file=sys.stderr)
                 y_pred = clf.predict(X_test)
                 preds = np.concatenate((preds, y_pred)) if preds is not None else y_pred
                 tests = np.concatenate((tests, y_test)) if tests is not None else y_test
@@ -278,7 +278,7 @@ def main():
             with open(fea_fname, "w") as fea_file:
                 fea_file.write(sprint_features(top_features))
 
-        sys.stderr.write('  test={:.5f} train={:.5f}\n'.format(avg_test_score, avg_train_score))
+        print('  test={:.5f} train={:.5f}'.format(avg_test_score, avg_train_score), file=sys.stderr)
         best_accuracy = max(avg_test_score, avg_test_score)
 
 
@@ -286,8 +286,8 @@ def main():
     naive_accuracy = max(np.bincount(y_data)) / len(y_data)
     end_time = time.time()
 
-    sys.stderr.write("\nBest accuracy: {:.3f}  (naive: {:.3f}, diff: {:+.3f})".format(best_accuracy, naive_accuracy, best_accuracy-naive_accuracy))
-    sys.stderr.write("\nTotal time: {:.1f} seconds\n\n".format(end_time - start_time))
+    print("\nBest accuracy: {:.3f}  (naive: {:.3f}, diff: {:+.3f})".format(best_accuracy, naive_accuracy, best_accuracy-naive_accuracy), file=sys.stderr)
+    print("\nTotal time: {:.1f} seconds\n".format(end_time - start_time), file=sys.stderr)
 
 
 if __name__ == '__main__':
