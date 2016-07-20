@@ -94,8 +94,10 @@ def test():
     print(y)
     print(labels)
 
+
 def score_format(metric, score, eol='\n'):
     return '{:<15} = {:.5f}'.format(metric, score) + eol
+
 
 def top_important_features(clf, feature_names, num_features=100):
     if hasattr(clf, "booster"): # XGB
@@ -117,6 +119,7 @@ def top_important_features(clf, feature_names, num_features=100):
         top = sorted(features, key=lambda f:f[0], reverse=True)[:num_features]
     return top
 
+
 def sprint_features(top_features, num_features=100):
     str = ''
     for i, feature in enumerate(top_features):
@@ -124,6 +127,7 @@ def sprint_features(top_features, num_features=100):
             break
         str += '{}\t{:.5f}\n'.format(feature[1], feature[0])
     return str
+
 
 def make_caffe_files(path, X, y, X2=None, y2=None):
 
@@ -162,6 +166,7 @@ def make_caffe_files(path, X, y, X2=None, y2=None):
     with open(test_filename, 'w') as f:
         f.write('test.h5\n')
 
+
 def main():
     start_time = time.time()
 
@@ -194,13 +199,15 @@ def main():
 
     classifiers = [
                     ('XGB', XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)),
-                    # ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
+                    ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
                     ('LASSO', LogisticRegression(penalty='l1')),
                     ('Ridge', LogisticRegression(penalty='l2')),
                     # ('SVM', SVC()),
                     # ('Ada', AdaBoostClassifier(n_estimators=100)),
                     # ('KNN', KNeighborsClassifier()),
                   ]
+
+    best_accuracy = -np.Inf
 
     for name, clf in classifiers:
         sys.stderr.write("\n> {}\n".format(name))
@@ -272,10 +279,16 @@ def main():
                 fea_file.write(sprint_features(top_features))
 
         sys.stderr.write('  test={:.5f} train={:.5f}\n'.format(avg_test_score, avg_train_score))
+        best_accuracy = max(avg_test_score, avg_test_score)
 
+
+    y_data = y_test if args.test else y
+    naive_accuracy = max(np.bincount(y_data)) / len(y_data)
     end_time = time.time()
 
+    sys.stderr.write("\nBest accuracy: {:.3f}  (naive: {:.3f}, diff: {:+.3f})".format(best_accuracy, naive_accuracy, best_accuracy-naive_accuracy))
     sys.stderr.write("\nTotal time: {:.1f} seconds\n\n".format(end_time - start_time))
+
 
 if __name__ == '__main__':
     # test()
