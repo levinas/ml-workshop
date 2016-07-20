@@ -1,10 +1,12 @@
 #! /usr/bin/env python
 
 from __future__ import print_function
+from __future__ import division
 
 import argparse
 import errno
 import h5py
+import operator
 import os
 import sys
 import time
@@ -12,6 +14,8 @@ import time
 import numpy as np
 import pandas as pd
 import numpy.random
+
+from StringIO import StringIO
 
 from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
@@ -24,7 +28,9 @@ from sklearn.metrics import accuracy_score, auc, f1_score, precision_score, reca
 
 from xgboost import XGBClassifier
 
+
 numpy.set_printoptions(threshold=numpy.nan)
+
 
 def guess_delimiter(text):
     delims = (',', '\t', ' ')
@@ -37,22 +43,25 @@ def guess_delimiter(text):
             delim = d
     return delim
 
-def read_dataset(fname, delimiter='infer', skipcols=1, thresh=None, imputer=None):
+def read_dataset(fname, delimiter='infer', skipcols=1, thresholds=None, imputer=None):
     sys.stderr.write("Reading data from {} ... ".format(fname))
     time1 = time.time()
     delim = delimiter if delimiter != 'infer' else guess_delimiter(open(fname).readline().rstrip())
     df = pd.read_csv(fname, sep=delim, na_values=['-', 'na'], engine='c')
     X = np.array(df.iloc[:, skipcols+1:])
-    y = np.array(df.iloc[:, skipcols:skipcols+1])
+    y = np.array(df.iloc[:, skipcols:skipcols+1]).ravel()
     X_label = list(df.columns.values)[skipcols+1:]
     sys.stderr.write("{:.2f} seconds\n".format(time.time() - time1))
     print("X.shape:", X.shape)
     if imputer:
         imp = Imputer(missing_values='NaN', strategy=imputer, axis=0)
         X = imp.fit_transform(X)
-    thresh = float(thresh) if thresh else np.median(y)
-    sys.stderr.write("Descritizing with threshold {}\n".format(thresh))
-    y = np.transpose(map(lambda x: 1 if x > thresh else 0, y))
+    if not thresholds:
+        thresholds = np.array([np.median(y)])
+    sys.stderr.write("Descritizing with thresholds: {}\n".format(thresholds))
+    y = np.digitize(y, thresholds)    #
+    hist, _ = np.histogram(y, range(len(thresholds)+2))
+    print('Y classes:', hist, '('+str(hist/len(y))+')')
     return X, y, X_label
 
 
@@ -89,13 +98,16 @@ def score_format(metric, score, eol='\n'):
     return '{:<15} = {:.5f}'.format(metric, score) + eol
 
 def top_important_features(clf, feature_names, num_features=100):
-    if hasattr(clf, "booster"):
-        fi = clf.booster().get_fscore()
-        return None
+    if hasattr(clf, "booster"): # XGB
+        fscore = clf.booster().get_fscore()
+        fscore = sorted(fscore.items(), key=operator.itemgetter(1), reverse=True)
+        features = [(v, feature_names[int(k[1:])]) for k,v in fscore]
+        top = features[:num_features]
+        return top
     elif not hasattr(clf, "feature_importances_"):
         if hasattr(clf, "coef_"):
             fi = clf.coef_[0]
-            features = [ (f, n) for f, n in zip(fi, feature_names)]
+            features = [(f, n) for f, n in zip(fi, feature_names)]
             top = sorted(features, key=lambda f:abs(f[0]), reverse=True)[:num_features]
             return top
         return
@@ -103,7 +115,6 @@ def top_important_features(clf, feature_names, num_features=100):
         fi = clf.feature_importances_
         features = [ (f, n) for f, n in zip(fi, feature_names)]
         top = sorted(features, key=lambda f:f[0], reverse=True)[:num_features]
-
     return top
 
 def sprint_features(top_features, num_features=100):
@@ -162,15 +173,15 @@ def main():
     parser.add_argument('-o', '--outdir', action='store', help='store results files to a specified directory')
     parser.add_argument('-p', '--prefix', action='store', help='output prefix')
     parser.add_argument('-s', '--skipcols', default=1, action='store', help='number of columns before the y column')
-    parser.add_argument('-t', '--threshold', default=None, action='store', help='convert y into a binary vector (default: median)')
+    parser.add_argument('-t', '--thresholds', type=float, default=None, nargs='*', action='store', help='convert y into a binary vector (default: median)')
     parser.add_argument('train', default='toy_training.csv', help='training drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     parser.add_argument('test', default='', nargs='?', help='testing drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     args = parser.parse_args()
 
-    X, y, labels = read_dataset(args.train, args.delimiter, args.skipcols, args.threshold, args.imputer)
+    X, y, labels = read_dataset(args.train, args.delimiter, args.skipcols, args.thresholds, args.imputer)
     X2, y2, labels2 = None, None, None
     if args.test:
-        X2, y2, labels2 = read_dataset(args.test, args.delimiter, args.skipcols, args.threshold, args.imputer)
+        X2, y2, labels2 = read_dataset(args.test, args.delimiter, args.skipcols, args.thresholds, args.imputer)
 
     # sys.exit(0)
 
@@ -182,9 +193,10 @@ def main():
         make_caffe_files(prefix+'.caffe', X, y, X2, y2)
 
     classifiers = [
-                    ('XGBoost', XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)),
-                    ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
-                    ('LogRegL1', LogisticRegression(penalty='l1')),
+                    ('XGB', XGBClassifier(max_depth=3, n_estimators=100, learning_rate=0.05)),
+                    # ('RF',  RandomForestClassifier(n_estimators=100, n_jobs=10)),
+                    ('LASSO', LogisticRegression(penalty='l1')),
+                    ('Ridge', LogisticRegression(penalty='l2')),
                     # ('SVM', SVC()),
                     # ('Ada', AdaBoostClassifier(n_estimators=100)),
                     # ('KNN', KNeighborsClassifier()),
@@ -226,7 +238,7 @@ def main():
 
         roc_auc_core = None
         if probas is not None:
-            fpr, tpr, thresholds = roc_curve(tests, probas[:, 1])
+            fpr, tpr, thresholds = roc_curve(tests, probas[:, 1], pos_label=0)
             roc_auc_score = auc(fpr, tpr)
             roc_fname = "{}.{}.ROC".format(prefix, name)
             with open(roc_fname, "w") as roc_file:
@@ -239,6 +251,11 @@ def main():
         with open(scores_fname, "w") as scores_file:
             for m in ms:
                 s = getattr(metrics, m)(tests, preds)
+                # print(m)
+                # if m in ['accuracy_score', 'log_loss']:
+                #     s = getattr(metrics, m)(tests, preds)
+                # else:
+                #     s = getattr(metrics, m)(tests, preds, pos_label=0)
                 scores_file.write(score_format(m, s))
             avg_train_score = np.mean(train_scores)
             avg_test_score = np.mean(test_scores)
