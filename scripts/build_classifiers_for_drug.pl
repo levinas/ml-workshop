@@ -46,9 +46,10 @@ for my $assay (@assays) {
     my $f2 = "\"$assay\"";
     my $out = "$drug_dir/$drug_file.$base";
 
+    next if -s "$drug_dir/$drug_file.$base.Ridge.scores";
     run("join <(head -n 1 $f1) <(head -n 1 $f2) > $out\n");
     run("join <(tail -n +2 $f1|sort) <(tail -n +2 $f2|sort) >> $out\n");
-    run("cd $drug_dir &&  ~/fs/ml-workshop/scripts/classify.py -m mean -f 5 $drug_file.$base 2>/dev/stdout |tee $drug_file.$base.log");
+    run("cd $drug_dir && ~/fs/ml-workshop/scripts/classify.py -m mean -f 5 $drug_file.$base && touch $drug_file.$base.DONE 2>/dev/stdout |tee $drug_file.$base.log");
 }
 
 

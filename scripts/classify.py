@@ -281,7 +281,6 @@ def main():
         print('  test={:.5f} train={:.5f}'.format(avg_test_score, avg_train_score), file=sys.stderr)
         best_accuracy = max(avg_test_score, avg_test_score)
 
-
     y_data = y_test if args.test else y
     naive_accuracy = max(np.bincount(y_data)) / len(y_data)
     end_time = time.time()
