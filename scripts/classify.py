@@ -15,7 +15,10 @@ import numpy as np
 import pandas as pd
 import numpy.random
 
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
@@ -30,6 +33,7 @@ from xgboost import XGBClassifier
 
 
 numpy.set_printoptions(threshold=numpy.nan)
+np.random.seed(2016)
 
 
 def guess_delimiter(text):
@@ -43,15 +47,19 @@ def guess_delimiter(text):
             delim = d
     return delim
 
+
 def read_dataset(fname, delimiter='infer', skipcols=1, thresholds=None, imputer=None):
     print("Reading data from {} ... ".format(fname), end="", file=sys.stderr)
     time1 = time.time()
-    delim = delimiter if delimiter != 'infer' else guess_delimiter(open(fname).readline().rstrip())
-    df = pd.read_csv(fname, sep=delim, na_values=['-', 'na'], engine='c')
+    delim = delimiter if delimiter != 'infer' else guess_delimiter(open(fname).readlines(20))
+    df = pd.read_csv(fname, sep=delim, na_values=['-', 'na', ''], engine='c')
+    print("{:.2f} seconds".format(time.time() - time1), file=sys.stderr)
+    skipcols = int(skipcols)
     X = np.array(df.iloc[:, skipcols+1:])
     y = np.array(df.iloc[:, skipcols:skipcols+1]).ravel()
     X_label = list(df.columns.values)[skipcols+1:]
-    print("{:.2f} seconds".format(time.time() - time1), file=sys.stderr)
+    print('y:', y[:20], '...', file=sys.stderr)
+    print('X_label:', X_label[:10], '...', file=sys.stderr)
     print("X.shape:", X.shape, file=sys.stderr)
     if imputer:
         imp = Imputer(missing_values='NaN', strategy=imputer, axis=0)
@@ -97,6 +105,7 @@ def test():
 
 def score_format(metric, score, eol='\n'):
     return '{:<15} = {:.5f}'.format(metric, score) + eol
+
 
 
 def top_important_features(clf, feature_names, num_features=100):
