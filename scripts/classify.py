@@ -29,7 +29,7 @@ from sklearn.svm import SVC
 from sklearn.preprocessing import Imputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.cross_validation import StratifiedKFold, StratifiedShuffleSplit
-from sklearn.metrics import accuracy_score, auc, f1_score, precision_score, recall_score, roc_curve
+from sklearn.metrics import accuracy_score, auc, f1_score, precision_score, recall_score, roc_curve, confusion_matrix
 
 from xgboost import XGBClassifier
 
@@ -230,9 +230,11 @@ def main():
     for name, clf in classifiers:
         print("\n> {}".format(name), file=sys.stderr)
         train_scores, test_scores = [], []
+        cms = []
         probas = None
         tests = None
         preds = None
+
 
         if args.test:
             X_train, X_test = X, X2
@@ -255,6 +257,8 @@ def main():
                 test_scores.append(clf.score(X_test, y_test))
                 print("  fold #{}: score={:.3f}".format(i, clf.score(X_test, y_test)), file=sys.stderr)
                 y_pred = clf.predict(X_test)
+                cm = confusion_matrix(y_test, y_pred)
+                cms.append(cm)
                 preds = np.concatenate((preds, y_pred)) if preds is not None else y_pred
                 tests = np.concatenate((tests, y_test)) if tests is not None else y_test
                 if hasattr(clf, "predict_proba"):
@@ -275,19 +279,27 @@ def main():
         ms = 'accuracy_score f1_score precision_score recall_score log_loss'.split()
         with open(scores_fname, "w") as scores_file:
             for m in ms:
-                s = getattr(metrics, m)(tests, preds)
-                # print(m)
-                # if m in ['accuracy_score', 'log_loss']:
-                #     s = getattr(metrics, m)(tests, preds)
-                # else:
-                #     s = getattr(metrics, m)(tests, preds, pos_label=0)
-                scores_file.write(score_format(m, s))
+                try:
+                    s = getattr(metrics, m)(tests, preds)
+                    # print(m)
+                    # if m in ['accuracy_score', 'log_loss']:
+                    #     s = getattr(metrics, m)(tests, preds)
+                    # else:
+                    #     s = getattr(metrics, m)(tests, preds, pos_label=0)
+                    scores_file.write(score_format(m, s))
+                except Exception:
+                    pass
             avg_train_score = np.mean(train_scores)
             avg_test_score = np.mean(test_scores)
             if roc_auc_score is not None:
                 scores_file.write(score_format('roc_auc_score', roc_auc_score))
             scores_file.write(score_format('avg_test_score', avg_test_score))
             scores_file.write(score_format('avg_train_score', avg_train_score))
+            try:
+                avg_cm = np.mean(cms, axis=0)
+                scores_file.write('\nConfusion matrix:\n{}\n'.format(avg_cm))
+            except Exception:
+                pass
             scores_file.write('\nModel:\n{}\n\n'.format(clf))
 
         top_features = top_important_features(clf, labels)
