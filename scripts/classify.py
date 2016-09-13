@@ -48,11 +48,11 @@ def guess_delimiter(text):
     return delim
 
 
-def read_dataset(fname, delimiter='infer', skipcols=1, thresholds=None, imputer=None):
+def read_dataset(fname, delimiter='infer', skipcols=1, thresholds=None, imputer=None, nrows=None):
     print("Reading data from {} ... ".format(fname), end="", file=sys.stderr)
     time1 = time.time()
-    delim = delimiter if delimiter != 'infer' else guess_delimiter(open(fname).readlines(20))
-    df = pd.read_csv(fname, sep=delim, na_values=['-', 'na', ''], engine='c')
+    delim = delimiter if delimiter != 'infer' else guess_delimiter(''.join(open(fname).readlines(10)))
+    df = pd.read_csv(fname, sep=delim, na_values=['-', 'na', ''], nrows=nrows, engine='c')
     print("{:.2f} seconds".format(time.time() - time1), file=sys.stderr)
     skipcols = int(skipcols)
     X = np.array(df.iloc[:, skipcols+1:])
@@ -184,6 +184,7 @@ def main():
     parser.add_argument('-d', '--delimiter', default='infer', action='store', help='save train and test files in HDF5 for Caffe')
     parser.add_argument('-f', '--folds', default=3, action='store', help='number of folds for cross validation if test data is not provided')
     parser.add_argument('-m', '--imputer', default=None, action='store', help='imputer to use for filling in missing values: mean, median, most_frequent')
+    parser.add_argument('-n', '--nrows', default=None, action='store', help='number of rows to read')
     parser.add_argument('-o', '--outdir', action='store', help='store results files to a specified directory')
     parser.add_argument('-p', '--prefix', action='store', help='output prefix')
     parser.add_argument('-s', '--skipcols', default=1, action='store', help='number of columns before the y column')
@@ -192,10 +193,10 @@ def main():
     parser.add_argument('test', default='', nargs='?', help='testing drug data file (columns: [CellLine PubChemID ZScore Feature1 Feature2 ...])')
     args = parser.parse_args()
 
-    X, y, labels = read_dataset(args.train, args.delimiter, args.skipcols, args.thresholds, args.imputer)
+    X, y, labels = read_dataset(args.train, args.delimiter, args.skipcols, args.thresholds, args.imputer, args.nrows)
     X2, y2, labels2 = None, None, None
     if args.test:
-        X2, y2, labels2 = read_dataset(args.test, args.delimiter, args.skipcols, args.thresholds, args.imputer)
+        X2, y2, labels2 = read_dataset(args.test, args.delimiter, args.skipcols, args.thresholds, args.imputer, args.nrows)
 
     # sys.exit(0)
 
