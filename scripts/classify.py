@@ -52,7 +52,7 @@ def read_dataset(fname, delimiter='infer', skipcols=1, thresholds=None, imputer=
     print("Reading data from {} ... ".format(fname), end="", file=sys.stderr)
     time1 = time.time()
     delim = delimiter if delimiter != 'infer' else guess_delimiter(''.join(open(fname).readlines(10)))
-    df = pd.read_csv(fname, sep=delim, na_values=['-', 'na', ''], nrows=nrows, engine='c')
+    df = pd.read_csv(fname, sep=delim, na_values=['-', 'na', ''], nrows=int(nrows), engine='c')
     print("{:.2f} seconds".format(time.time() - time1), file=sys.stderr)
     skipcols = int(skipcols)
     X = np.array(df.iloc[:, skipcols+1:])
