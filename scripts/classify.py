@@ -114,7 +114,6 @@ def score_format(metric, score, eol='\n'):
     return '{:<15} = {:.5f}'.format(metric, score) + eol
 
 
-
 def top_important_features(clf, feature_names, num_features=100):
     if hasattr(clf, "booster"): # XGB
         fscore = clf.booster().get_fscore()
